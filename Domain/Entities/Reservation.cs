@@ -14,18 +14,18 @@ public class Reservation : BaseEntity
     public DateTime StartTime { get; set; }
     public DateTime EndTime
     { get; set; }
-    public User Admin { get; set; }
-    public List<User> Users { get; set; }
+    public string AdminNickname { get; set; }
+    public List<string> UsersNickname { get; set; }
     public ReservationStatus ReservationStatus { get; set; }
 
-    public Reservation(Guid Id, DateTime startTime, DateTime endTime, User Admin, List<User> Users,
+    public Reservation(Guid Id, DateTime startTime, DateTime endTime, string adminNickname, List<string> usersNickname,
         ReservationStatus reservationStatus)
     {
         this.Id = Id;
         StartTime = startTime;
         EndTime = endTime;
-        this.Admin = Admin;
-        this.Users = Users;
+        this.AdminNickname = adminNickname;
+        this.UsersNickname = usersNickname;
         ReservationStatus = reservationStatus;
     }
 

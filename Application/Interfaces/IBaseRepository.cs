@@ -6,7 +6,7 @@ namespace Application.Interfaces;
 public interface IBaseRepository <T>
 {
     public T? GetById(Guid id);
-    public IEnumerable<T> GetAll();
+    public List<T> GetAll();
     public void Add(T entity);
     public void Update(T entity);
     public void Delete(Guid id);

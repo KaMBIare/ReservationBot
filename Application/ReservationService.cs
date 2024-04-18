@@ -2,38 +2,48 @@ using Application.Interfaces;
 using Domain;
 using Domain.Primitives;
 using Infrastructure;
+using Microsoft.EntityFrameworkCore;
 
 
 namespace Application;
 
 public class ReservationService : IBaseRepository<Reservation>
 {
-    private ApplicationContext _context;
+    public ApplicationContext context;
 
     public ReservationService(ApplicationContext context)
     {
-        _context = context;
+        this.context = context;
     }
     
     public Reservation? GetById(Guid id)
     {
-        return _context.Reservations.Find(id);
+        return context.Reservations.Find(id);
     }
 
-    public IEnumerable<Reservation> GetAll()
+    public List<Reservation> GetAll()
     {
-        return _context.Reservations;
+        return context.Reservations.ToList();
     }
 
     public void Add(Reservation entity)
     {
-        _context.Reservations.Add(entity);
-        _context.SaveChanges();
+        context.Reservations.Add(entity);
+        
+        try
+        {
+            context.SaveChanges();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
     }
 
     public void Update(Reservation entity)
     {
-        var updatingEntity = _context.Reservations.FirstOrDefault(e => e.Equals(entity));
+        var updatingEntity = context.Reservations.FirstOrDefault(e => e.Equals(entity));
         //проверка на наличие сущности в базе данных, если нету то пробрасывает исключение
         if (updatingEntity == null)
         {
@@ -41,12 +51,12 @@ public class ReservationService : IBaseRepository<Reservation>
         }
 
         updatingEntity = entity;
-        _context.SaveChanges();
+        context.SaveChanges();
     }
 
     public void Delete(Guid id)
     {
-        _context.Reservations.Remove(_context.Reservations.Find(id));
+        context.Reservations.Remove(context.Reservations.Find(id));
     }
     /// <summary>
     /// возвращает true, если указаное время прошло ряд проверок на валидность
@@ -56,8 +66,6 @@ public class ReservationService : IBaseRepository<Reservation>
     /// <returns></returns>
     public bool IsValidTime(DateTime startTime, DateTime endTime, ref string? notValidDescription)
     {
-        
-        
         //проверка на коректность ввода времени
         if (endTime < startTime)
         {
@@ -70,7 +78,6 @@ public class ReservationService : IBaseRepository<Reservation>
             notValidDescription ="Время брони не может быть в прошлом";
             return false;
         }
-
         // проверка не занимает ли общее время брони больше 24 часов
         if ((endTime - startTime).Duration().TotalHours > 24)
         {
@@ -78,38 +85,44 @@ public class ReservationService : IBaseRepository<Reservation>
             notValidDescription = "Время брони не может превышать 24 часа";
             return false;
         }
-        
-        foreach (var i in _context.Reservations)
+        try
         {
-            //если время планируемой записи находится в промежутке между началом и концом, уже существуюущей записи, которая либо планируется, либо прямо сейчас происходит встреча, то вернуть false
-            if (((startTime < i.EndTime && startTime > i.StartTime)
-                 || (endTime < i.EndTime && endTime > i.StartTime))
-                &&(i.ReservationStatus == ReservationStatus.Meeting || i.ReservationStatus== ReservationStatus.Planned))
+            foreach (var i in context.Reservations)
             {
-                notValidDescription = "На это время переговорка уже забронированна";
-                return false;
+                //если время планируемой записи находится в промежутке между началом и концом, уже существуюущей записи, которая либо планируется, либо прямо сейчас происходит встреча, то вернуть false
+                if (((startTime < i.EndTime && startTime > i.StartTime)
+                     || (endTime < i.EndTime && endTime > i.StartTime))
+                    &&(i.ReservationStatus == ReservationStatus.Meeting || i.ReservationStatus== ReservationStatus.Planned))
+                {
+                    notValidDescription = "На это время переговорка уже забронированна";
+                    return false;
+                }
             }
         }
-
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+        
         return true;
     }
 
     /// <summary>
     /// возвращает все брони в который указанный пользователь является админом
     /// </summary>
-    /// <param name="adminId"></param>
+    /// <param name="adminNickname"></param>
     /// <returns></returns>
-    public List<Reservation> GetAllReservationByAdminId(string adminId)
+    public List<Reservation> GetAllReservationByAdminId(string adminNickname)
     {
         var reservations = new List<Reservation>();
-        foreach (var i in _context.Reservations)
+        foreach (var reservation in context.Reservations)
         {
-            if (i.Admin.Id == adminId)
+            if (reservation.AdminNickname == adminNickname)
             {
-                reservations.Add(i);
+                reservations.Add(reservation);
             }
         }
-
         return reservations;
     }
 
@@ -118,14 +131,14 @@ public class ReservationService : IBaseRepository<Reservation>
     /// </summary>
     /// <param name="userId"></param>
     /// <returns></returns>
-    public List<Reservation> GetAllReservationByUserId(string userId)
+    public List<Reservation> GetAllReservationByUserId(string userNickname)
     {
         var reservations = new List<Reservation>();
-        foreach (var reservation in _context.Reservations)
+        foreach (var reservation in context.Reservations)
         {
-            foreach (var user in reservation.Users)
+            foreach (var user in reservation.UsersNickname)
             {
-                if (user.Id == userId)
+                if (user == userNickname)
                 {
                     reservations.Add(reservation);
                 }
